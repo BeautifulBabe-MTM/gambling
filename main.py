@@ -23,6 +23,18 @@ def search_groups(client, chats, word1_list, word2_list):
                     break
     return matched_groups
 
+def send_message_to_groups(client, chats, message):
+    for chat in chats:
+        try:
+            client.send_message(chat, message)
+            print(f"Сообщение отправлено в группу: {chat.title}")
+        except (PeerFloodError, UserPrivacyRestrictedError) as e:
+            print(f"Не удалось отправить сообщение в {chat.title}: {str(e)}")
+            time.sleep(1)
+        except Exception as e:
+            print(f"Ошибка: {str(e)}")
+        time.sleep(random.randint(1, 3))
+
 if __name__ == "__main__":
     while True:
         options = getoptions()
@@ -48,6 +60,7 @@ if __name__ == "__main__":
         selection = str(input("1 - Настройки\n"
                             "2 - Парсинг\n"
                             "3 - Запустить парсер\n"
+                            "4 - Заспамить чаты\n"
                             "e - Выход\n"
                             "Ввод: "))
         
@@ -159,6 +172,41 @@ if __name__ == "__main__":
 
             print(f"Найдено групп по ключевым словам: {len(matched_groups)}")
             print("Группы записаны в файл 'groups.txt'")
+
+
+        elif selection == '4':
+            print("Введите сообщение для рассылки: ")
+            message = input()
+
+            print("Выберите юзер-бота для рассылки сообщений.\n"
+                "(Аккаунт, который состоит в группах, куда будут отправлены сообщения)\n")
+
+            sessions = []
+            for file in os.listdir('.'):
+                if file.endswith('.session'):
+                    sessions.append(file)
+
+            for i in range(len(sessions)):
+                print(f"[{i}] -", sessions[i], '\n')
+            i = int(input("Ввод: "))
+            
+            client = TelegramClient(sessions[i].replace('\n', ''), api_id, api_hash).start(sessions[i].replace('\n', ''))
+
+            chats = []
+            last_date = None    
+            size_chats = 200
+
+            result = client(GetDialogsRequest(
+                offset_date=last_date,
+                offset_id=0,
+                offset_peer=InputPeerEmpty(),
+                limit=size_chats,
+                hash=0
+            ))
+            chats.extend(result.chats)
+
+            send_message_to_groups(client, chats, message)
+
 
         elif selection == 'e':
             break
